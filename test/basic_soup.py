@@ -1,8 +1,7 @@
 """
     Version 1.0 basic source with lots of print
-
     todo:
-    * add specific excecptions and replace variables with explicit names
+    * add specific exceptions and replace variables/functions with explicit names
     * add comments
     * check contents vs text
 """
@@ -17,6 +16,8 @@ LOGGING_FILE = "c:/temp/log.txt"
 HTML_CONTENT_FILE = "c:/temp/html_contents.txt"
 HTML_PRODUCT_FILE = "c:/temp/html_product.txt"
 SCRAP_PARSER = "html.parser"
+# SCRAP_PARSER = "lxml"
+
 
 def start_logging():
     """add comment"""
@@ -28,6 +29,7 @@ def start_logging():
     except Exception as error:
         print("Unexpected exception: {}".format(error))
 
+
 def make_html_parser(url, source_file=HTML_CONTENT_FILE):
     """add comment"""
     logging.debug("make_html_parser")
@@ -36,25 +38,27 @@ def make_html_parser(url, source_file=HTML_CONTENT_FILE):
     page = requests.get(url)
     soup = BeautifulSoup(page.content, SCRAP_PARSER)
 
-    # writing the html content prettified into a file
-    with open(source_file, "w") as html_file:
-        try:
-            html_file.write(soup.prettify())
+    # # writing the html content prettified into a file
+    # with open(source_file, "w") as html_file:
+    #     try:
+    #         html_file.write(soup.prettify())
+    #
+    #     except Exception as error:
+    #         print("Unexpected exception: {}".format(error))
+    #
+    # with open(source_file) as fp:
+    #     soup = BeautifulSoup(fp, SCRAP_PARSER)
 
-        except Exception as error:
-            print("Unexpected exception: {}".format(error))
+    return soup
 
-    with open(source_file) as fp:
-        soup = BeautifulSoup(fp, SCRAP_PARSER)
-
-    return(soup)
 
 def get_all_books(soup):
     """add comment"""
     logging.debug("get_all_books")
 
-    a = soup.find ('div', class_="side_categories")
+    a = soup.find('div', class_="side_categories")
     return [a.ul.a.contents[0].strip(), a.ul.a.get('href')]
+
 
 def get_all_books_category(soup):
     """add comment"""
@@ -67,9 +71,10 @@ def get_all_books_category(soup):
                 if len(b) == 1:
                     url = URL_TO_SCRAP + b.get('href')
                     category = b.contents[0].text.strip()
-                    all_books_category[category]=url
+                    all_books_category[category] = url
 
-    return(all_books_category)
+    return all_books_category
+
 
 def get_page_number_out_of_total(soup):
     """add comment"""
@@ -77,20 +82,24 @@ def get_page_number_out_of_total(soup):
 
     li = soup.find('li', class_='current')
     current_page = li.text.strip()
-    print(f'examining current page={current_page}')
-    return(current_page)
+
+    return current_page
+
 
 def get_next_page(soup):
     """add comment"""
     logging.debug("get_next_page")
 
     li = soup.find('li', class_='next')
-    if li != None:
+    url = None
+
+    if li is not None:
         if li.a.get('href').startswith('catalogue'):
             url = URL_TO_SCRAP + li.a.get('href')
         else:
             url = URL_TO_SCRAP + 'catalogue/' + li.a.get('href')
-    return(url)
+    return url
+
 
 def get_all_products_in_page_details(soup):
     """add comment"""
@@ -104,7 +113,8 @@ def get_all_products_in_page_details(soup):
         else:
             url = URL_TO_SCRAP + 'catalogue/' + h3.a.get('href')
         all_products_details.append(get_a_product_details(title, url))
-    return(all_products_details)
+    return all_products_details
+
 
 def get_a_product_details(title, url, html_product_file=HTML_PRODUCT_FILE):
     """add comment"""
@@ -112,7 +122,7 @@ def get_a_product_details(title, url, html_product_file=HTML_PRODUCT_FILE):
 
     soup = make_html_parser(url, html_product_file)
     a = soup.find('div', class_='item active')
-    if a == None:
+    if a is None:
         sys.exit(0)
     image_url = URL_TO_SCRAP + a.img.get('src').replace("../", "")
     table_data = [i.text for i in soup.find_all('td')]
@@ -129,33 +139,40 @@ def get_a_product_details(title, url, html_product_file=HTML_PRODUCT_FILE):
     # return([title, image_url, universal_product_code, category, price_including_tax, price_excluding_tax,
     #         number_available, review_rating, star_rating])
 
-    return([])
+    return [title]
 
-def scrap_all_pages_collecting_books_details(soup):
+
+def scrap_all_pages_collecting_books_details(soup, url, all_products_details=[], total_length=0):
     """add comment"""
-    all_products_details = get_all_products_in_page_details(soup)
-    current_page = get_page_number_out_of_total(soup)
-    next_page_url = get_next_page(soup)
+    try:
+        products_details = get_all_products_in_page_details(soup)
+        current_page = get_page_number_out_of_total(soup)
+        next_page_url = get_next_page(soup)
 
-    while next_page_url != None:
-        next_soup = make_html_parser(next_page_url, HTML_CONTENT_FILE)
-        next_all_products_details = get_all_products_in_page_details(next_soup)
-        length = len(all_products_details)
-        all_products_details += next_all_products_details
-        next_current_page = get_page_number_out_of_total(next_soup)
-        next_page_url = get_next_page(next_soup)
-        scrap_all_pages_collecting_books_details(next_soup)
+        print(f'examining current page={current_page} url={url}')
+        length = len(products_details)
+        total_length += length
+        print(f'found {length} items total {total_length} items : {products_details}')
+        all_products_details += products_details
 
-    return(all_products_details)
+        if next_page_url is not None:
+            next_soup = make_html_parser(next_page_url, HTML_CONTENT_FILE)
+            scrap_all_pages_collecting_books_details(next_soup, next_page_url,
+                                                     all_products_details, total_length)
+
+    except Exception as error:
+        print("Unexpected exception: {}".format(error))
+
+    return all_products_details
+
 
 if __name__ == "__main__":
     """add comment"""
     start_logging()
-    soup = make_html_parser(URL_TO_SCRAP, HTML_CONTENT_FILE)
+    url = URL_TO_SCRAP
+    soup = make_html_parser(url, HTML_CONTENT_FILE)
     get_all_books(soup)
     all_books_category = get_all_books_category(soup)
-    scrap_all_pages_collecting_books_details(soup)
+    scrap_all_pages_collecting_books_details(soup, url)
 
     sys.exit(0)
-
-
