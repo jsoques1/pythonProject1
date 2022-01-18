@@ -5,6 +5,7 @@
     * add specific excecptions and replace variables with explicit names
     * add comments
     * check contents vs text
+    * ...
 """
 import sys
 import os
