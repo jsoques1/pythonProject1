@@ -158,10 +158,11 @@ def scrap_all_pages_collecting_books_details(soup, url, all_products_details=[],
         print(f'type(next_page_url)={type(next_page_url)}')
         print(f'next_page_url={next_page_url}')
 
-        while next_page_url is not None:
+        if next_page_url is not None:
             next_soup = make_html_parser(next_page_url, HTML_CONTENT_FILE)
             scrap_all_pages_collecting_books_details(next_soup, next_page_url,
                                                      all_products_details, total_length)
+
     except Exception as error:
         print("Unexpected exception: {}".format(error))
 
@@ -172,7 +173,6 @@ if __name__ == "__main__":
     """add comment"""
     start_logging()
     url = URL_TO_SCRAP
-    #url = 'http://books.toscrape.com/catalogue/page-49.html'
     soup = make_html_parser(url, HTML_CONTENT_FILE)
     get_all_books(soup)
     all_books_category = get_all_books_category(soup)
