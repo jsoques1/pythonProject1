@@ -8,22 +8,39 @@
 
 import os
 import re
+import shutil
 import sys
 import time
 import csv
 import logging
 import requests
-from pathlib import Path
 from bs4 import (BeautifulSoup, element)
 
 URL_TO_SCRAP = 'http://books.toscrape.com/'
 SCRAP_PARSER = 'html.parser'
-DEFAULT_LOGGING_DIR = 'c:/temp/'
+DEFAULT_LOGGING_DIR = 'c:/temp/P2/log/'
 DEFAULT_LOGGING_FILE_NAME = 'log.txt'
-DEFAULT_IMG_DIR = 'c:/temp/img/'
-DEFAULT_CSV_DIR = 'c:/temp/'
+DEFAULT_IMG_DIR = 'c:/temp/P2/img/'
+DEFAULT_CSV_DIR = 'c:/temp/P2/csv/'
 DEFAULT_CSV_HEADER = ['title', 'image_url', 'universal_product_code', 'category', 'price_including_tax',
                       'price_excluding_tax', 'number_available', 'review_rating', 'star_rating']
+
+
+def clean_up_previous_results():
+    try:
+        if os.path.isdir(DEFAULT_LOGGING_DIR):
+            shutil.rmtree(DEFAULT_LOGGING_DIR)
+        if os.path.isdir(DEFAULT_CSV_DIR):
+            shutil.rmtree(DEFAULT_CSV_DIR)
+        if os.path.isdir(DEFAULT_IMG_DIR):
+            shutil.rmtree(DEFAULT_IMG_DIR)
+
+        os.makedirs(DEFAULT_LOGGING_DIR)
+        os.makedirs(DEFAULT_CSV_DIR)
+        os.makedirs(DEFAULT_IMG_DIR)
+
+    except Exception as error:
+        print(f'Unexpected exception in clean_up_previous_results(): {error}')
 
 
 def start_logging():
@@ -43,7 +60,7 @@ def start_logging():
         logging.debug("start_logging")
 
     except Exception as error:
-        print(f'Unexpected exception: {error}')
+        print(f'Unexpected exception in start_logging(): {error}')
 
 
 def make_html_parser(url):
@@ -61,7 +78,9 @@ def get_all_books(soup):
     logging.debug("get_all_books")
 
     a = soup.find('div', class_="side_categories")
-    return [a.ul.a.contents[0].strip(), a.ul.a.get('href')]
+    books = a.ul.a.contents[0].strip()
+    books_url = URL_TO_SCRAP + 'catalogue/' + a.ul.a.get('href')
+    return {books: books_url}
 
 
 def get_all_books_category(soup):
@@ -73,7 +92,7 @@ def get_all_books_category(soup):
         for b in a.ul.ul.descendants:
             if isinstance(b, element.Tag):
                 if len(b) == 1:
-                    url = URL_TO_SCRAP + b.get('href')
+                    url = URL_TO_SCRAP + 'catalogue/' + b.get('href')
                     category = b.contents[0].text.strip()
                     all_books_category[category] = url
 
@@ -84,25 +103,25 @@ def get_page_number_out_of_total(soup):
     """add comment"""
     logging.debug("get_page_number_out_of_total")
 
+    current_page = None
     li = soup.find('li', class_='current')
-    current_page = li.text.strip()
+    if li is not None:
+        current_page = li.text.strip()
 
     return current_page
 
 
-def get_next_page(soup):
+def get_next_page(soup, url):
     """add comment"""
     logging.debug("get_next_page")
 
     li = soup.find('li', class_='next')
-    url = None
+    next_url = None
 
     if li is not None:
-        if li.a.get('href').startswith('catalogue'):
-            url = URL_TO_SCRAP + li.a.get('href')
-        else:
-            url = URL_TO_SCRAP + 'catalogue/' + li.a.get('href')
-    return url
+        next_url = url[:url.rfind("/")] + '/' + li.a.get('href')
+
+    return next_url
 
 
 def get_all_products_in_page_details(soup, product_category='Books'):
@@ -112,8 +131,11 @@ def get_all_products_in_page_details(soup, product_category='Books'):
     all_products_details = []
     for h3 in soup.find_all('h3'):
         title = h3.a.get('title').strip()
+        #print(f"h3 title={title} {h3.a.get('href')}")
         if h3.a.get('href').startswith('catalogue'):
             url = URL_TO_SCRAP + h3.a.get('href')
+        elif h3.a.get('href').startswith('../'):
+            url = URL_TO_SCRAP + 'catalogue/' + h3.a.get('href').replace('../', '')
         else:
             url = URL_TO_SCRAP + 'catalogue/' + h3.a.get('href')
         all_products_details.append(get_a_product_details(title, url, product_category))
@@ -152,9 +174,12 @@ def scrap_all_pages_collecting_books_details(soup, url, all_products_details=[],
     try:
         products_details = get_all_products_in_page_details(soup, product_category)
         current_page = get_page_number_out_of_total(soup)
-        next_page_url = get_next_page(soup)
+        next_page_url = get_next_page(soup, url)
 
-        trace_info = f'examining {current_page} url={url}'
+        if current_page is None:
+            trace_info = f'examining Page 1 of 1 url={url}'
+        else:
+            trace_info = f'examining {current_page} url={url}'
         print(trace_info)
         logging.info(trace_info)
         length = len(products_details)
@@ -166,10 +191,10 @@ def scrap_all_pages_collecting_books_details(soup, url, all_products_details=[],
         if next_page_url is not None:
             next_soup = make_html_parser(next_page_url)
             scrap_all_pages_collecting_books_details(next_soup, next_page_url,
-                                                     all_products_details, total_length)
+                                                     all_products_details, total_length, product_category)
 
     except Exception as error:
-        print(f'Unexpected exception: {error}')
+        print(f'Unexpected exception in scrap_all_pages_collecting_books_details(): {error}')
 
     return all_products_details
 
@@ -178,7 +203,7 @@ def write_to_csv(csv_dir=DEFAULT_CSV_DIR, csv_header=DEFAULT_CSV_HEADER, csv_con
     """add comment"""
     logging.debug("write_to_csv")
 
-    csv_file = csv_dir + product_category.replace(' ', '') + '.csv'
+    csv_file = csv_dir + product_category.replace(' ', '_') + '.csv'
 
     try:
         with open(csv_file, "w", newline='') as fopen:  # Open the csv file.
@@ -188,7 +213,7 @@ def write_to_csv(csv_dir=DEFAULT_CSV_DIR, csv_header=DEFAULT_CSV_HEADER, csv_con
                 csv_writer.writerow(csv_row)
 
     except Exception as error:
-        print(f'Unexpected exception: {error}')
+        print(f'Unexpected exception in write_to_csv(): {error}')
         return False
 
     return True
@@ -197,17 +222,12 @@ def write_to_csv(csv_dir=DEFAULT_CSV_DIR, csv_header=DEFAULT_CSV_HEADER, csv_con
 def extract_images_from_all_products_details(all_product_details, img_dir=DEFAULT_IMG_DIR, product_category='Books'):
     img_dir += product_category.replace(' ', '_') + '/'
     try:
-        for file in Path(img_dir).glob('*'):
-            file.unlink()
-
-        if os.path.isdir(img_dir):
-            Path(img_dir).rmdir()
-
-        print(f'extracting img into {img_dir}')
+        number_of_images = len(all_product_details)
+        print(f'extracting {number_of_images} image files into {img_dir}')
 
         os.makedirs(img_dir)
     except Exception as error:
-        print(f'exception {error} raised for {img_dir}')
+        print(f'Unexpected exception in extract_images_from_all_products_details(): {error} raised for {img_dir}')
         return False
     
     try:    
@@ -218,26 +238,30 @@ def extract_images_from_all_products_details(all_product_details, img_dir=DEFAUL
             open(img_name_file, 'wb').write(request.content)
 
     except Exception as error:
-        print(f'Unexpected exception: {error}')
+        print(f'Unexpected exception in extract_images_from_all_products_details(): {error}')
         return False
     
     return True
 
 if __name__ == "__main__":
     """add comment"""
+
+    clean_up_previous_results()
     start_logging()
     # url = URL_TO_SCRAP
     url = 'http://books.toscrape.com/catalogue/page-49.html'
     soup = make_html_parser(url)
-    get_all_books(soup)
-    all_books_category = get_all_books_category(soup)
-    all_products_details = scrap_all_pages_collecting_books_details(soup, url)
-    write_to_csv(csv_contents=all_products_details)
-    extract_images_from_all_products_details(all_products_details)
+    all_books = get_all_books(soup)
+    all_books_category = all_books | get_all_books_category(soup)
 
-    # for books_category in all_books_category:
-    #     all_products_details = scrap_all_pages_collecting_books_details(soup, books_category.url)
-    #     write_to_csv(csv_contents=all_products_details)
-    #     extract_images_from_all_products_details(all_products_details)
+    for books_category in all_books_category.keys():
+        all_products_details = []
+        url = all_books_category[books_category]
+        print(f'processing books_category={books_category} url={url}')
+        soup = make_html_parser(url)
+        all_products_details = scrap_all_pages_collecting_books_details(soup, url, all_products_details=[], product_category=books_category)
+        write_to_csv(csv_contents=all_products_details, product_category=books_category)
+        extract_images_from_all_products_details(all_products_details, product_category=books_category)
+        print()
 
     sys.exit(0)
