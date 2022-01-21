@@ -3,7 +3,6 @@
     todo:
     * add specific exceptions and replace variables/functions with explicit names
     * add comments
-    * check contents vs text
 """
 
 import os
