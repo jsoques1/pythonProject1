@@ -28,6 +28,11 @@ DEFAULT_CSV_HEADER = ['product_page_url', 'universal_product_code', 'title', 'pr
 
 def clean_up_previous_results():
     try:
+        if sys.platform != 'win32':
+            DEFAULT_LOGGING_DIR.replace('c:/temp', '/tmp')
+            DEFAULT_IMG_DIR.replace('c:/temp', '/tmp')
+            DEFAULT_CSV_DIR.replace('c:/temp', '/tmp')
+
         if os.path.isdir(DEFAULT_LOGGING_DIR):
             shutil.rmtree(DEFAULT_LOGGING_DIR)
         if os.path.isdir(DEFAULT_CSV_DIR):
@@ -131,7 +136,6 @@ def get_all_products_in_page_details(soup, product_category='Books'):
     all_products_details = []
     for h3 in soup.find_all('h3'):
         title = h3.a.get('title').strip()
-        #print(f"h3 title={title} {h3.a.get('href')}")
         if h3.a.get('href').startswith('catalogue'):
             url = URL_TO_SCRAP + h3.a.get('href')
         elif h3.a.get('href').startswith('../'):
@@ -146,6 +150,7 @@ def get_a_product_details(title, url, product_category='Books'):
     """add comment"""
     logging.debug("get_a_product_details")
 
+
     soup = make_html_parser(url)
     div = soup.find('div', class_='item active')
     if div is None:
@@ -155,7 +160,6 @@ def get_a_product_details(title, url, product_category='Books'):
     image_url = URL_TO_SCRAP + div.img.get('src').replace("../", "")
     table_data = [i.text for i in soup.find_all('td')]
     universal_product_code = table_data[0].strip()
-    category = product_category
     price_including_tax = table_data[2].strip()
     price_excluding_tax = table_data[3].strip()
     number_available = table_data[5].strip()
@@ -163,9 +167,11 @@ def get_a_product_details(title, url, product_category='Books'):
     star_rating = soup.find('p', class_='star-rating')['class'][1]
 
     product_description = soup.find_all('p')[3].get_text()
+    if ord(product_description[0]) == 10:
+        product_description = 'No description available'
 
     return [url, universal_product_code, title, price_including_tax, price_excluding_tax,
-            number_available, product_description, category, review_rating, star_rating, image_url]
+            number_available, product_description, product_category, review_rating, star_rating, image_url]
 
 
 def scrap_all_pages_collecting_books_details(soup, url, all_products_details=[], total_length=0, product_category='Books'):
@@ -207,10 +213,11 @@ def write_to_csv(csv_dir=DEFAULT_CSV_DIR, csv_header=DEFAULT_CSV_HEADER, csv_con
     csv_file = csv_dir + product_category.replace(' ', '_') + '.csv'
 
     try:
-        with open(csv_file, "w", newline='') as fopen:  # Open the csv file.
+        with open(csv_file, "w", newline='', errors="ignore") as fopen:  # Open the csv file.
             csv_writer = csv.writer(fopen, delimiter='\t')
             csv_writer.writerow(csv_header)
             for csv_row in csv_contents:
+                # print(f'csv_contents={csv_row}')
                 csv_writer.writerow(csv_row)
 
     except Exception as error:
@@ -221,6 +228,9 @@ def write_to_csv(csv_dir=DEFAULT_CSV_DIR, csv_header=DEFAULT_CSV_HEADER, csv_con
 
 
 def extract_images_from_all_products_details(all_product_details, img_dir=DEFAULT_IMG_DIR, product_category='Books'):
+    """add comment"""
+    logging.debug("write_to_csv")
+
     img_dir += product_category.replace(' ', '_') + '/'
     try:
         number_of_images = len(all_product_details)
