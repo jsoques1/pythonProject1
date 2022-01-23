@@ -9,7 +9,6 @@ import os
 import re
 import shutil
 import sys
-import time
 import csv
 import logging
 import requests
