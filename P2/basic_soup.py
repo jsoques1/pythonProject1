@@ -207,7 +207,7 @@ def write_to_csv(csv_dir=DEFAULT_CSV_DIR, csv_header=DEFAULT_CSV_HEADER, csv_con
     csv_file = csv_dir + product_category.replace(' ', '_') + '.csv'
 
     try:
-        with open(csv_file, "w", newline='', encoding='utf-8') as fopen:  # Open the csv file.
+        with open(csv_file, "w", newline='') as fopen:  # Open the csv file.
             csv_writer = csv.writer(fopen, delimiter='\t')
             csv_writer.writerow(csv_header)
             for csv_row in csv_contents:
