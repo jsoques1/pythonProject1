@@ -1,8 +1,8 @@
 """
     Version 1.0 basic source with lots of print
-    todo:
-    * add specific exceptions and replace variables/functions with explicit names
-    * add comments
+    Version 1.1 scraping of the "Books" category
+    Version 1.2 scraping of all books category
+    Version 1.3 scraping of a single book category
 """
 
 import os
@@ -27,6 +27,9 @@ DEFAULT_CSV_HEADER = ['product_page_url', 'universal_product_code', 'title', 'pr
 
 
 def clean_up_previous_results():
+    """Recreate all directories and files obtained in a previous run
+    Raise an exception in case of error.
+    """
     try:
         if sys.platform != 'win32':
             DEFAULT_LOGGING_DIR.replace('c:/temp', '/tmp')
@@ -49,7 +52,9 @@ def clean_up_previous_results():
 
 
 def start_logging():
-    """add comment"""
+    """Create a debug log file
+    Raise an exception in case of errors.
+    """
     try:
         logging_file_path = DEFAULT_LOGGING_DIR + DEFAULT_LOGGING_FILE_NAME
         if os.path.isfile(logging_file_path):
@@ -69,7 +74,9 @@ def start_logging():
 
 
 def make_html_parser(url):
-    """add comment"""
+    """Making a parser for the url given
+    Returns the parser.
+    """
     logging.debug("make_html_parser")
 
     # extract the main page of the website
@@ -79,7 +86,9 @@ def make_html_parser(url):
 
 
 def get_all_books(soup):
-    """add comment"""
+    """Retrieves the url of the book mark
+    returns a dictionary with the book mark and the url
+    """
     logging.debug("get_all_books")
 
     div = soup.find('div', class_="side_categories")
@@ -89,7 +98,8 @@ def get_all_books(soup):
 
 
 def get_all_books_category(soup):
-    """add comment"""
+    """Retrieves all the books categories and the url of the categories
+    returns a dictionary with the categories and the url of the category"""
     logging.debug("get_all_books_category")
 
     all_books_category = {}
@@ -105,7 +115,8 @@ def get_all_books_category(soup):
 
 
 def get_page_number_out_of_total(soup):
-    """add comment"""
+    """Get the page number of out the total number of pages
+    Returs either if the page number is not given in the current page or None else"""
     logging.debug("get_page_number_out_of_total")
 
     current_page = None
@@ -117,7 +128,8 @@ def get_page_number_out_of_total(soup):
 
 
 def get_next_page(soup, url):
-    """add comment"""
+    """Get the next page url if the tag with next exists
+    Returs either next page url or None else"""
     logging.debug("get_next_page")
 
     li = soup.find('li', class_='next')
@@ -130,7 +142,7 @@ def get_next_page(soup, url):
 
 
 def get_all_products_in_page_details(soup, product_category='Books'):
-    """add comment"""
+    """Retrieves all the details for all the books displayed on the current page"""
     logging.debug("get_all_products_in_page_details")
 
     all_products_details = []
@@ -147,7 +159,8 @@ def get_all_products_in_page_details(soup, product_category='Books'):
 
 
 def get_a_product_details(title, url, product_category='Books'):
-    """add comment"""
+    """Retrieves all the details for a single book whose url is given
+    Raise an exception in case of error"""
     logging.debug("get_a_product_details")
 
 
@@ -155,7 +168,6 @@ def get_a_product_details(title, url, product_category='Books'):
     div = soup.find('div', class_='item active')
     if div is None:
         raise KeyError("in get_a_product_details")
-        return []
 
     image_url = URL_TO_SCRAP + div.img.get('src').replace("../", "")
     table_data = [i.text for i in soup.find_all('td')]
@@ -175,7 +187,8 @@ def get_a_product_details(title, url, product_category='Books'):
 
 
 def scrap_all_pages_collecting_books_details(soup, url, all_products_details=[], total_length=0, product_category='Books'):
-    """add comment"""
+    """Retrieves all the details for all books starting from the given url and following the next url
+    Raise an exception in case of error"""
     logging.debug("scrap_all_pages_collecting_books_details")
 
     try:
@@ -207,17 +220,17 @@ def scrap_all_pages_collecting_books_details(soup, url, all_products_details=[],
 
 
 def write_to_csv(csv_dir=DEFAULT_CSV_DIR, csv_header=DEFAULT_CSV_HEADER, csv_contents=[], product_category='Books'):
-    """add comment"""
+    """Write in to a csv file the contents scrapped
+    Returns False in case of failure or True if successful"""
     logging.debug("write_to_csv")
 
     csv_file = csv_dir + product_category.replace(' ', '_') + '.csv'
 
     try:
-        with open(csv_file, "w", newline='', errors="ignore") as fopen:  # Open the csv file.
+        with open(csv_file, "w", newline='', errors="ignore") as fopen:
             csv_writer = csv.writer(fopen, delimiter='\t')
             csv_writer.writerow(csv_header)
             for csv_row in csv_contents:
-                # print(f'csv_contents={csv_row}')
                 csv_writer.writerow(csv_row)
 
     except Exception as error:
@@ -228,7 +241,8 @@ def write_to_csv(csv_dir=DEFAULT_CSV_DIR, csv_header=DEFAULT_CSV_HEADER, csv_con
 
 
 def extract_images_from_all_products_details(all_product_details, img_dir=DEFAULT_IMG_DIR, product_category='Books'):
-    """add comment"""
+    """Retrieves all the image for all books contained in the all_product_details list
+    Returns False in case of failure or True if successful"""
     logging.debug("write_to_csv")
 
     img_dir += product_category.replace(' ', '_') + '/'
@@ -255,7 +269,10 @@ def extract_images_from_all_products_details(all_product_details, img_dir=DEFAUL
     return True
 
 if __name__ == "__main__":
-    """add comment"""
+    """In case of no argument, the script scraps details & images for all categories
+    With a book category delimited by double quotes, the script scraps details & images for this category
+    The script exits with 0 in case of success or -1 otherwise
+    """
     try:
         clean_up_previous_results()
         start_logging()
@@ -266,20 +283,18 @@ if __name__ == "__main__":
 
         len_arg = len(sys.argv)
         if len_arg > 2:
-            raise KeyError("wrong number of arg in __main__")
+            raise Exception("wrong number of arg")
 
         category = ''
         if len_arg == 2:
             category = sys.argv[1][0:len(sys.argv[1])]
 
             if type(category) is not str:
-                raise KeyError("key not found in Unexpected exception in __main__")
-                sys.exit(-1)
+                raise Exception("type(category) is wrong")
 
             books_url = all_books_category[category]
             if books_url is None:
-                raise KeyError("key not found in Unexpected exception in __main__")
-                sys.exit(-1)
+                raise KeyError("Book category not found")
             else:
                 all_books_category = {category: books_url}
 
@@ -288,14 +303,16 @@ if __name__ == "__main__":
             url = all_books_category[books_category]
             print(f'processing books_category={books_category} url={url}')
             soup = make_html_parser(url)
-            all_products_details = scrap_all_pages_collecting_books_details(soup, url, all_products_details=[], product_category=books_category)
+            all_products_details = scrap_all_pages_collecting_books_details(soup, url, all_products_details=[],
+                                                                            product_category=books_category)
             write_to_csv(csv_contents=all_products_details, product_category=books_category)
             extract_images_from_all_products_details(all_products_details, product_category=books_category)
             print()
 
     except KeyError as error:
-        print(f'Unexpected exception in __main__: {error}')
+        print(f'Book category not found in __main__: {error}')
         sys.exit(-1)
+
     except Exception as error:
         print(f'Unexpected exception in __main__: {error}')
         sys.exit(-1)
