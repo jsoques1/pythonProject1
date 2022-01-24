@@ -1,5 +1,7 @@
 # pythonProject1
 
+P2 : Utilisez les bases de Python pour l'analyse de marché
+
 https://github.com/jsoques1/pythonProject1.git
 
 basic_soup.py: main source
