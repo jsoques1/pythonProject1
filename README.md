@@ -1,10 +1,15 @@
 # pythonProject1
+
 https://github.com/jsoques1/pythonProject1.git
+
 basic_soup.py: main source
+
 requirement.txt: additional packages
 
 usage:
+
     python basic_source.py : creates directories for csv file and images for each book categories
+    
     python basic_source.py category : creates directories for csv file and images for specified book category
                                       argument category should be a string enclosed by a double quote
 									  
