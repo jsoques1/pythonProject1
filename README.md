@@ -14,5 +14,7 @@ usage:
     
     python basic_source.py category : creates directories for csv file and images for specified book category
                                       argument category should be a string enclosed by a double quote
+				
+tab is the separator for the csv file
 									  
 tested under Win32 Python 3.10.1
