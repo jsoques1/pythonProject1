@@ -6,7 +6,6 @@
 """
 
 import os
-import re
 import shutil
 import sys
 import csv
@@ -30,11 +29,6 @@ def clean_up_previous_results():
     Raise an exception in case of error.
     """
     try:
-        if sys.platform != 'win32':
-            DEFAULT_LOGGING_DIR.replace('c:/temp', '/tmp')
-            DEFAULT_IMG_DIR.replace('c:/temp', '/tmp')
-            DEFAULT_CSV_DIR.replace('c:/temp', '/tmp')
-
         if os.path.isdir(DEFAULT_LOGGING_DIR):
             shutil.rmtree(DEFAULT_LOGGING_DIR)
         if os.path.isdir(DEFAULT_CSV_DIR):
