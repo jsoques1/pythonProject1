@@ -20,7 +20,7 @@ P2 : Utilisez les bases de Python pour l'analyse de marché
 	
 	mypath/env/Scripts/activate
 		
-	pip install -r <mypath>/pythonProject1/requirement.txt
+	pip install -r mypath/pythonProject1/requirement.txt
 
 * Execution:
 
