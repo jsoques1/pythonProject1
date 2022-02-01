@@ -176,7 +176,7 @@ def get_a_product_details(title, url, product_category='Books'):
         product_description = 'No description available'
 
     return [url, universal_product_code, title, price_including_tax, price_excluding_tax,
-            number_available, product_description, product_category, review_rating, star_rating, image_url]
+            number_available, product_description.replace(';',','), product_category, review_rating, star_rating, image_url]
 
 
 def scrap_all_pages_collecting_books_details(soup, url, all_products_details=[], total_length=0, product_category='Books'):
